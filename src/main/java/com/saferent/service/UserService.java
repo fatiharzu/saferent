@@ -4,10 +4,12 @@ import com.saferent.domain.*;
 import com.saferent.domain.Role;
 import com.saferent.domain.enums.*;
 import com.saferent.dto.request.*;
+import com.saferent.dto.response.UserDTO;
 import com.saferent.exception.*;
 import com.saferent.exception.message.*;
+import com.saferent.mapper.UserMapper;
 import com.saferent.repository.*;
-import org.springframework.beans.factory.annotation.*;
+import com.saferent.security.service.SecurityUtils;
 import org.springframework.context.annotation.*;
 import org.springframework.security.crypto.password.*;
 import org.springframework.stereotype.*;
@@ -26,10 +28,13 @@ public class UserService {
 
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, RoleService roleService, @Lazy PasswordEncoder passwordEncoder) {
+    private final UserMapper userMapper;
+
+    public UserService(UserRepository userRepository, RoleService roleService, @Lazy PasswordEncoder passwordEncoder, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.roleService = roleService;
         this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
     }
 
     public User getUserByEmail(String email){
@@ -71,4 +76,26 @@ public class UserService {
         userRepository.save(user);
 
     }
+
+    public List<UserDTO> getAllUsers()
+    {
+      List<User> users = userRepository.findAll();
+      List<UserDTO> userDTOS = userMapper.map(users);
+      return userDTOS;
+    }
+
+    public UserDTO getPrincipal() {
+        User user = getCurrentUser();
+        UserDTO userDTO = userMapper.userToUserDTO(user);
+        return userDTO;
+    }
+
+    public User getCurrentUser(){
+       String email =  SecurityUtils.getCurrentUserLogin().orElseThrow(()->
+                new ResourceNotFoundException(ErrorMessage.PRINCIPLE_FOUND_MESSAGE));
+       User user = getUserByEmail(email);
+       return user;
+    }
+
+    // !!! GetAllUserPage
 }
